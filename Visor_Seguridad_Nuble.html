@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Visor de Seguridad 8% | Región de Ñuble</title>
+    
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            /* Tema Oscuro Táctico para Seguridad */
+            --bg-dark: #020617;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-light: rgba(255, 255, 255, 0.1);
+            
+            /* Colores de Subcategorías de Seguridad (Tácticos) */
+            --cat-camaras: #ef4444; /* Rojo Alerta */
+            --cat-iluminacion: #eab308; /* Amarillo Luz */
+            --cat-incendios: #f97316; /* Naranja Fuego */
+            --cat-bomberos: #3b82f6; /* Azul Emergencia */
+            --cat-comunitaria: #10b981; /* Verde Vecinal */
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            overflow: hidden;
+            display: flex;
+            height: 100vh;
+            height: 100dvh;
+        }
+
+        #map {
+            flex-grow: 1;
+            height: 100%;
+            z-index: 1;
+            background: var(--bg-dark);
+        }
+
+        /* Viñeta oscura sobre el mapa */
+        .map-vignette {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(90deg, rgba(2,6,23,0.85) 0%, rgba(2,6,23,0) 50%, rgba(2,6,23,0) 100%);
+            z-index: 500;
+            pointer-events: none;
+        }
+
+        .leaflet-control-attribution { display: none; }
+        .leaflet-control-zoom { border: none !important; box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important; margin-right: 20px !important; margin-bottom: 24px !important; }
+        .leaflet-control-zoom a { background: rgba(15,23,42,0.8) !important; color: #fff !important; backdrop-filter: blur(10px); border-color: rgba(255,255,255,0.1) !important; }
+
+        /* Panel Flotante */
+        .dashboard-panel {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            width: 400px; /* Un poco más angosto ya que tiene menos data visual */
+            bottom: 24px;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(30px) saturate(150%);
+            -webkit-backdrop-filter: blur(30px) saturate(150%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 28px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .header {
+            padding: 32px 28px 20px 28px;
+            border-bottom: 1px solid var(--border-light);
+            background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #ffffff;
+            letter-spacing: -0.5px;
+        }
+        
+        .header h1 i { color: var(--cat-camaras); }
+
+        .header p {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 10px;
+            line-height: 1.5;
+            font-weight: 300;
+        }
+
+        .kpi-container {
+            display: flex;
+            gap: 12px;
+            padding: 16px 28px;
+            border-bottom: 1px solid var(--border-light);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .kpi-box { flex: 1; display: flex; flex-direction: column; }
+        .kpi-value { font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px; }
+        .kpi-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; margin-top: 2px; }
+
+        /* Filtros horizontales */
+        .filter-container {
+            padding: 16px 28px;
+            display: flex;
+            flex-wrap: wrap; 
+            gap: 8px;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .filter-chip {
+            padding: 6px 14px;
+            border-radius: 24px;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            transition: all 0.25s;
+            user-select: none;
+            white-space: nowrap; 
+        }
+        .filter-chip:hover { background: rgba(255, 255, 255, 0.1); color: #ffffff; }
+        .filter-chip.active { background: #ffffff; color: #0f172a; border-color: #ffffff; font-weight: 600; }
+
+        /* Lista de Proyectos Minimalista */
+        .project-details {
+            padding: 20px 28px;
+            overflow-y: auto;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px; /* Menos espacio entre tarjetas */
+        }
+        .project-details::-webkit-scrollbar { width: 4px; }
+        .project-details::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+
+        .project-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px; /* Más redondeadas y pequeñas */
+            padding: 14px 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
+        }
+
+        .project-card:hover, .project-card.active {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--category-color);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px -5px rgba(0,0,0,0.5);
+        }
+
+        .project-card::before {
+            content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px;
+            background: var(--category-color); border-radius: 0 4px 4px 0;
+            box-shadow: 0 0 10px var(--category-color); opacity: 0.5; transition: 0.3s;
+        }
+
+        .project-card:hover::before, .project-card.active::before { opacity: 1; width: 4px; }
+
+        .org-name {
+            font-size: 10px; font-weight: 700; color: var(--category-color);
+            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+        }
+
+        .project-title { font-size: 13px; font-weight: 500; margin-bottom: 6px; line-height: 1.35; color: #ffffff; }
+
+        @media (max-width: 768px) {
+            .map-vignette { background: linear-gradient(0deg, rgba(2,6,23,0.95) 0%, rgba(2,6,23,0) 45%); }
+            .dashboard-panel {
+                top: auto; left: 0; right: 0; bottom: 0;
+                width: 100%; height: 45dvh; /* Panel más bajo en móvil para dejar espacio al mapa y popups */
+                border-radius: 32px 32px 0 0;
+                border: none; border-top: 1px solid rgba(255, 255, 255, 0.2);
+            }
+            .dashboard-panel::before {
+                content: ''; position: absolute; top: 12px; left: 50%;
+                transform: translateX(-50%); width: 48px; height: 5px;
+                background: rgba(255,255,255,0.3); border-radius: 10px; z-index: 10;
+            }
+            .header { padding-top: 30px; padding-left: 20px; padding-right: 20px; padding-bottom: 15px;}
+            .header h1 { font-size: 20px; }
+            .kpi-container, .filter-container, .project-details { padding-left: 20px; padding-right: 20px; }
+            .leaflet-control-zoom { margin-bottom: 50dvh !important; margin-right: 15px !important; }
+            
+            /* Ajuste del popup en celulares */
+            .leaflet-popup-content { width: 280px !important; padding: 15px !important; }
+        }
+
+        /* Marker Personalizado (Radar) */
+        .custom-marker { position: relative; }
+        .marker-core {
+            width: 12px; height: 12px; border-radius: 50%; border: 2px solid #ffffff;
+            position: absolute; top: 2px; left: 2px; z-index: 2;
+        }
+        .marker-pulse {
+            width: 16px; height: 16px; border-radius: 50%;
+            position: absolute; top: 0; left: 0; z-index: 1;
+            animation: pulse 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.9; }
+            100% { transform: scale(3.5); opacity: 0; }
+        }
+
+        /* =========================================
+           ESTILOS PARA POPUPS (HOVER SOBRE MAPA)
+           ========================================= */
+        .leaflet-popup-content-wrapper {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            color: #f8fafc;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            padding: 0;
+            overflow: hidden;
+        }
+        .leaflet-popup-tip { background: rgba(15, 23, 42, 0.95); }
+        .leaflet-popup-content { margin: 0; padding: 20px; width: 300px !important; }
+        .leaflet-container a.leaflet-popup-close-button {
+            color: #fff; padding: 12px 12px 0 0; font-size: 18px; text-shadow: none;
+        }
+        .leaflet-container a.leaflet-popup-close-button:hover { color: #cbd5e1; }
+
+        /* Barras de progreso dentro del popup */
+        .track-item { margin-bottom: 12px; }
+        .track-item:last-child { margin-bottom: 0; }
+        .track-header {
+            display: flex; justify-content: space-between; font-size: 10px; font-weight: 500;
+            color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .progress-bg { height: 4px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 4px; transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        .badge { background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; font-size: 10px; color: #fff; letter-spacing: 0.5px; }
+
+        /* Botones de documentos */
+        .doc-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 10px; background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 6px;
+            font-size: 11px; color: #cbd5e1; text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .doc-btn:hover { background: rgba(255,255,255,0.15); color: #fff; border-color: rgba(255,255,255,0.3); }
+        .doc-btn i { width: 12px; height: 12px; }
+
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+    <div class="map-vignette"></div>
+
+    <div class="dashboard-panel">
+        <div class="header">
+            <h1><i data-lucide="shield-alert"></i> Visor de Seguridad 8%</h1>
+            <p>Monitoreo territorial y financiero de iniciativas de seguridad ciudadana e incendios.</p>
+        </div>
+        
+        <div class="kpi-container">
+            <div class="kpi-box">
+                <div class="kpi-value">540</div>
+                <div class="kpi-label">Proyectos Admitidos</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-value" style="color: var(--cat-camaras)">1.5B</div>
+                <div class="kpi-label">Inversión (M$)</div>
+            </div>
+        </div>
+
+        <div class="filter-container" id="filters">
+            <div class="filter-chip active" onclick="filterProjects('Todos')">Todos</div>
+            <div class="filter-chip" onclick="filterProjects('Cámaras y Alarmas')">Cámaras y Alarmas</div>
+            <div class="filter-chip" onclick="filterProjects('Iluminación')">Iluminación</div>
+            <div class="filter-chip" onclick="filterProjects('Prevención Incendios')">Incendios</div>
+            <div class="filter-chip" onclick="filterProjects('Equipamiento')">Equipamiento</div>
+        </div>
+
+        <div class="project-details" id="project-list">
+            <!-- JS Data -->
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        const map = L.map('map', { zoomControl: false }).setView([-36.6066, -72.1034], 10); 
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 22, maxNativeZoom: 18, attribution: 'Tiles &copy; Esri'
+        }).addTo(map);
+
+        const catColors = {
+            'Cámaras y Alarmas': 'var(--cat-camaras)',
+            'Iluminación': 'var(--cat-iluminacion)',
+            'Prevención Incendios': 'var(--cat-incendios)',
+            'Equipamiento': 'var(--cat-bomberos)',
+            'Acción Comunitaria': 'var(--cat-comunitaria)'
+        };
+
+        const projects = [
+            // CÁMARAS Y ALARMAS
+            {
+                id: 1, code: "2301SP0101", title: "Alarmas comunitarias: Cobquecura Urbano está protegido", org: "Junta de Vecinos Cobquecura Urbano", category: "Cámaras y Alarmas", comuna: "Cobquecura", provincia: "ITATA", lat: -36.1333, lng: -72.7900, inversion: "$4.500.000", avanceFisico: 100, avanceFinanciero: 100,
+                img: "./security_camera.jpg", estadoRendicion: "Aprobada"
+            },
+            {
+                id: 3, code: "2301SP0047", title: "Implementación de Cámaras de Vigilancia en Villa San Miguel Arcángel", org: "Junta de Vecinos Villa San Miguel Arcángel", category: "Cámaras y Alarmas", comuna: "Chillán", provincia: "DIGUILLÍN", lat: -36.6200, lng: -72.0800, inversion: "$5.800.000", avanceFisico: 80, avanceFinanciero: 100,
+                img: "./security_camera.jpg", estadoRendicion: "Pendiente"
+            },
+            {
+                id: 7, code: "2301SP0061", title: "Cámaras de seguridad para Arboleda de Lantaño", org: "Junta de Vecinos Arboleda de Lantaño", category: "Cámaras y Alarmas", comuna: "Chillán", provincia: "DIGUILLÍN", lat: -36.5950, lng: -72.1150, inversion: "$4.100.000", avanceFisico: 45, avanceFinanciero: 50,
+                img: "./security_camera.jpg", estadoRendicion: "En Ejecución"
+            },
+            // ACCIÓN COMUNITARIA
+            {
+                id: 6, code: "2301SP0010", title: "Talleres de Defensa Personal", org: "ONG Ñuble Crece", category: "Acción Comunitaria", comuna: "Chillán", provincia: "DIGUILLÍN", lat: -36.6111, lng: -72.1034, inversion: "$1.500.000", avanceFisico: 100, avanceFinanciero: 100,
+                estadoRendicion: "En Revisión"
+            },
+            // ILUMINACIÓN
+            {
+                id: 2, code: "2301SP0001", title: "Con Iluminación mejoramos la seguridad de todos, 2da Etapa", org: "Junta de Vecinos Las Viñas", category: "Iluminación", comuna: "Bulnes", provincia: "DIGUILLÍN", lat: -36.7423, lng: -72.2989, inversion: "$3.250.000", avanceFisico: 65, avanceFinanciero: 50,
+                img: "./led_street_light.jpg", estadoRendicion: "En Ejecución"
+            },
+            {
+                id: 8, code: "2301SP0003", title: "Iluminando Batuco", org: "Junta de Vecinos Batuco", category: "Iluminación", comuna: "Ránquil", provincia: "ITATA", lat: -36.6410, lng: -72.5850, inversion: "$2.800.000", avanceFisico: 90, avanceFinanciero: 80,
+                img: "./led_street_light.jpg", estadoRendicion: "Pendiente"
+            },
+            {
+                id: 9, code: "2301SP0006", title: "Con iluminación nos sentimos más seguros", org: "Junta de Vecinos Las Carmelitas 5-R", category: "Iluminación", comuna: "Bulnes", provincia: "DIGUILLÍN", lat: -36.7550, lng: -72.2800, inversion: "$3.100.000", avanceFisico: 10, avanceFinanciero: 0,
+                img: "./led_street_light.jpg", estadoRendicion: "En Ejecución"
+            },
+            {
+                id: 10, code: "2301SP0008", title: "Un saltillo de luz y seguridad", org: "Junta de Vecinos El Saltillo N° 6-R", category: "Iluminación", comuna: "Pemuco", provincia: "DIGUILLÍN", lat: -36.9750, lng: -72.1020, inversion: "$2.400.000", avanceFisico: 100, avanceFinanciero: 100,
+                img: "./led_street_light.jpg", estadoRendicion: "Aprobada"
+            },
+            // PREVENCIÓN INCENDIOS
+            {
+                id: 5, code: "2301SP0011", title: "Prevención de Desastres: Brigada Antiincendios Rahuil", org: "Junta de Vecinos Rahuil", category: "Prevención Incendios", comuna: "Ránquil", provincia: "ITATA", lat: -36.6600, lng: -72.6100, inversion: "$2.900.000", avanceFisico: 15, avanceFinanciero: 50,
+                img: "./rural_firefighters.jpg", estadoRendicion: "En Ejecución"
+            },
+            {
+                id: 11, code: "2301SP0002", title: "Llahuen Bajo previene los incendios", org: "Junta de Vecinos Llahuen Bajo", category: "Prevención Incendios", comuna: "Portezuelo", provincia: "ITATA", lat: -36.5350, lng: -72.4350, inversion: "$1.850.000", avanceFisico: 50, avanceFinanciero: 50,
+                img: "./rural_firefighters.jpg", estadoRendicion: "En Ejecución"
+            },
+            {
+                id: 12, code: "2301SP0015", title: "Mingacos Comunitarios en Copiulemu para prevenir incendios", org: "Junta de Vecinos Copiulemu", category: "Prevención Incendios", comuna: "Cobquecura", provincia: "ITATA", lat: -36.1450, lng: -72.7800, inversion: "$1.200.000", avanceFisico: 80, avanceFinanciero: 50,
+                img: "./rural_firefighters.jpg", estadoRendicion: "En Ejecución"
+            },
+            {
+                id: 13, code: "2301SP0016", title: "En Coyanco nos preparamos para enfrentar el fuego", org: "Junta de Vecinos Coyanco Unidad Vecinal N° 6", category: "Prevención Incendios", comuna: "Ninhue", provincia: "ITATA", lat: -36.3950, lng: -72.3950, inversion: "$2.100.000", avanceFisico: 100, avanceFinanciero: 100,
+                img: "./rural_firefighters.jpg", estadoRendicion: "Aprobada"
+            },
+            // EQUIPAMIENTO
+            {
+                id: 4, code: "2301SP0005", title: "Bomberos de San Nicolás conectados para las emergencias", org: "Cuerpo de Bomberos de San Nicolás", category: "Equipamiento", comuna: "San Nicolás", provincia: "PUNILLA", lat: -36.5050, lng: -72.2050, inversion: "$6.000.000", avanceFisico: 30, avanceFinanciero: 0,
+                img: "./rural_firefighters.jpg", estadoRendicion: "Pendiente"
+            },
+            {
+                id: 14, code: "2301SP0082", title: "Equipamiento de Emergencia Rural y Abastecimiento de Agua", org: "Comité APR Los Castaños de Parque Lantaño", category: "Equipamiento", comuna: "Chillán", provincia: "DIGUILLÍN", lat: -36.5850, lng: -72.1250, inversion: "$8.500.000", avanceFisico: 20, avanceFinanciero: 50,
+                img: "./rural_firefighters.jpg", estadoRendicion: "En Ejecución"
+            },
+            {
+                id: 15, code: "2301SP0053", title: "La Seguridad más amigable con Bomberos de Quirihue", org: "Cuerpo de Bomberos Quirihue", category: "Equipamiento", comuna: "Quirihue", provincia: "ITATA", lat: -36.2850, lng: -72.5450, inversion: "$7.200.000", avanceFisico: 100, avanceFinanciero: 100,
+                img: "./rural_firefighters.jpg", estadoRendicion: "En Revisión"
+            }
+        ];
+
+        const projectListContainer = document.getElementById('project-list');
+        let currentMarkers = [];
+
+        function renderProjects(filter = 'Todos') {
+            projectListContainer.innerHTML = '';
+            currentMarkers.forEach(m => map.removeLayer(m.marker));
+            currentMarkers = [];
+            
+            const filteredProjects = filter === 'Todos' ? projects : projects.filter(p => p.category === filter);
+
+            filteredProjects.forEach(p => {
+                const color = catColors[p.category] || '#94a3b8';
+                
+                // Marcador en mapa
+                const customIcon = L.divIcon({
+                    className: 'custom-marker',
+                    html: `
+                        <div class="marker-pulse" style="background-color: ${color}; box-shadow: 0 0 20px ${color};"></div>
+                        <div class="marker-core" style="background-color: ${color};"></div>
+                    `,
+                    iconSize: [16, 16], iconAnchor: [8, 8]
+                });
+
+                const marker = L.marker([p.lat, p.lng], {icon: customIcon}).addTo(map);
+                
+                // Determinar el color e ícono de rendición
+                let rendicionColor = '#94a3b8';
+                let rendicionIcon = 'clock';
+                if(p.estadoRendicion === 'Aprobada') { rendicionColor = '#10b981'; rendicionIcon = 'check-circle'; }
+                if(p.estadoRendicion === 'En Revisión') { rendicionColor = '#3b82f6'; rendicionIcon = 'search'; }
+                if(p.estadoRendicion === 'Pendiente') { rendicionColor = '#eab308'; rendicionIcon = 'alert-triangle'; }
+
+                // Contenido del Popup de Leaflet (Se muestra al hacer click en el marcador o tarjeta)
+                const popupContent = `
+                    ${p.img ? `<img src="${p.img}" style="width: 100%; height: 100px; object-fit: cover; border-radius: 10px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.1);">` : ''}
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 10px; font-weight: 700; color: ${color}; text-transform: uppercase; margin-bottom: 4px;">
+                            ${p.category}
+                        </div>
+                        <div style="font-size: 14px; font-weight: 600; margin-bottom: 6px; line-height: 1.25;">${p.title}</div>
+                        <div style="font-size: 11px; color: #cbd5e1; display:flex; gap:6px; align-items:center;">
+                            <i data-lucide="building" style="width:12px;height:12px;"></i> ${p.org}
+                        </div>
+                    </div>
+                    
+                    <div style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 12px; margin-top: 8px;">
+                        <div class="track-item">
+                            <div class="track-header">
+                                <span>Ejecución Física</span>
+                                <span style="color: #fff; font-weight: 600">${p.avanceFisico}%</span>
+                            </div>
+                            <div class="progress-bg">
+                                <div class="progress-fill" style="width: ${p.avanceFisico}%; background: ${color}"></div>
+                            </div>
+                        </div>
+                        <div class="track-item">
+                            <div class="track-header">
+                                <span>Ejecución Financiera</span>
+                                <span style="color: #fff; font-weight: 600">${p.avanceFinanciero}%</span>
+                            </div>
+                            <div class="progress-bg">
+                                <div class="progress-fill" style="width: ${p.avanceFinanciero}%; background: #10b981"></div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 12px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px;">Control de Rendición de Cuentas</div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 13px; font-weight: 600; color: ${rendicionColor};">${p.estadoRendicion || 'No reportado'}</span>
+                                <i data-lucide="${rendicionIcon}" style="width: 14px; height: 14px; color: ${rendicionColor};"></i>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+                            <span class="badge">COD: ${p.code}</span>
+                            <span style="color: #10b981; font-size: 13px; font-weight: 700;">${p.inversion}</span>
+                        </div>
+
+                        <div style="margin-top: 15px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.1);">
+                            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">Documentos Oficiales</div>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <a href="#" class="doc-btn" onclick="event.preventDefault();"><i data-lucide="file-text"></i> Resolución</a>
+                                <a href="#" class="doc-btn" onclick="event.preventDefault();"><i data-lucide="file-signature"></i> Convenio</a>
+                                ${p.estadoRendicion === 'Aprobada' ? `<a href="#" class="doc-btn" style="border-color: rgba(16,185,129,0.3); color: #10b981;" onclick="event.preventDefault();"><i data-lucide="check-square"></i> Acta de Cierre</a>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                marker.bindPopup(popupContent, { 
+                    offset: [0, -5],
+                    autoPan: false // Desactivamos el auto-pan nativo porque interfiere con nuestro flyToWithOffset
+                });
+                
+                marker.on('click', () => {
+                    highlightProject(p.id);
+                    flyToWithOffset(p.lat, p.lng, 15);
+                    setTimeout(() => { lucide.createIcons(); }, 50);
+                });
+
+                currentMarkers.push({id: p.id, marker: marker});
+
+                // Tarjeta minimalista para la lista lateral
+                const card = document.createElement('div');
+                card.className = 'project-card';
+                card.id = `card-${p.id}`;
+                card.style.setProperty('--category-color', color);
+                
+                card.innerHTML = `
+                    <div class="org-name"><i data-lucide="shield" style="width:10px;height:10px;display:inline;"></i> ${p.category}</div>
+                    <div class="project-title">${p.title}</div>
+                    <div style="font-size: 12px; color: var(--text-muted); display:flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                        <span><i data-lucide="building" style="width:12px;height:12px;vertical-align:text-bottom;"></i> ${p.org}</span>
+                        <span style="color: #cbd5e1;"><i data-lucide="map-pin" style="width:12px;height:12px;vertical-align:text-bottom;"></i> ${p.comuna}</span>
+                    </div>
+                `;
+
+                card.onclick = () => {
+                    highlightProject(p.id);
+                    flyToWithOffset(p.lat, p.lng, 15);
+                    // Abre el popup asociado a este marcador
+                    marker.openPopup();
+                    setTimeout(() => { lucide.createIcons(); }, 50);
+                };
+
+                projectListContainer.appendChild(card);
+            });
+            
+            lucide.createIcons();
+            
+            if(currentMarkers.length > 0 && filter !== 'Todos') {
+                const group = new L.featureGroup(currentMarkers.map(m => m.marker));
+                map.fitBounds(group.getBounds().pad(0.3));
+            } else if (filter === 'Todos') {
+                map.setView([-36.6066, -72.1034], 10);
+            }
+        }
+
+        function filterProjects(category) {
+            document.querySelectorAll('.filter-chip').forEach(chip => {
+                chip.classList.remove('active');
+                if(chip.innerText.includes(category) || (category === 'Todos' && chip.innerText === 'Todos')) {
+                    chip.classList.add('active');
+                }
+            });
+            renderProjects(category);
+        }
+
+        function highlightProject(id) {
+            document.querySelectorAll('.project-card').forEach(c => c.classList.remove('active'));
+            document.getElementById(`card-${id}`).classList.add('active');
+        }
+
+        // Función para volar al marcador compensando el ancho del menú lateral y la altura del popup
+        function flyToWithOffset(lat, lng, zoom) {
+            const targetPoint = map.project([lat, lng], zoom);
+            if (window.innerWidth > 768) {
+                // Escritorio: panel izquierdo y popup muy alto.
+                // Restamos en X para mover el centro del mapa a la izquierda (el marcador se va a la derecha).
+                // Restamos en Y para mover el centro del mapa hacia arriba (el marcador baja, dejando espacio para el popup).
+                targetPoint.x -= 250; 
+                targetPoint.y -= 150;
+            } else {
+                // Móvil: El panel ocupa 45vh abajo, movemos el centro visual hacia arriba
+                targetPoint.y += window.innerHeight * 0.15;
+            }
+            const targetLatLng = map.unproject(targetPoint, zoom);
+            map.flyTo(targetLatLng, zoom, { duration: 1.5 });
+        }
+
+        renderProjects();
+    </script>
+</body>
+</html>
