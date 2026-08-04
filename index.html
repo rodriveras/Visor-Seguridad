@@ -471,57 +471,54 @@
                 // Contenido del Popup de Leaflet (Se muestra al hacer click en el marcador o tarjeta)
                 const popupContent = `
                     <div class="popup-mobile-scroll">
-                        ${p.img ? `<img src="${p.img}" style="width: 100%; height: 100px; object-fit: cover; border-radius: 10px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.1);">` : ''}
-                        <div style="margin-bottom: 12px;">
-                        <div style="font-size: 10px; font-weight: 700; color: ${color}; text-transform: uppercase; margin-bottom: 4px;">
-                            ${p.category}
+                        ${p.img ? `<img src="${p.img}" style="width: 100%; height: 75px; object-fit: cover; border-radius: 8px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.1);">` : ''}
+                        <div style="margin-bottom: 8px;">
+                        <div style="font-size: 9px; font-weight: 700; color: ${color}; text-transform: uppercase; margin-bottom: 2px;">
+                            ${p.category} • COD: ${p.code}
                         </div>
-                        <div style="font-size: 14px; font-weight: 600; margin-bottom: 6px; line-height: 1.25;">${p.title}</div>
-                        <div style="font-size: 11px; color: #cbd5e1; display:flex; gap:6px; align-items:center;">
-                            <i data-lucide="building" style="width:12px;height:12px;"></i> ${p.org}
+                        <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px; line-height: 1.2;">${p.title}</div>
+                        <div style="font-size: 10px; color: #cbd5e1; display:flex; gap:4px; align-items:center;">
+                            <i data-lucide="building" style="width:10px;height:10px;"></i> ${p.org}
                         </div>
                     </div>
                     
-                    <div style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 12px; margin-top: 8px;">
-                        <div class="track-item">
-                            <div class="track-header">
-                                <span>Ejecución Física</span>
-                                <span style="color: #fff; font-weight: 600">${p.avanceFisico}%</span>
+                    <div style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px; margin-top: 6px;">
+                        <!-- Progreso en Fila -->
+                        <div style="display: flex; gap: 12px; margin-bottom: 8px;">
+                            <div style="flex: 1;">
+                                <div class="track-header" style="font-size: 9px; margin-bottom: 2px;">
+                                    <span>Física</span>
+                                    <span style="color: #fff; font-weight: 600">${p.avanceFisico}%</span>
+                                </div>
+                                <div class="progress-bg" style="height: 3px;">
+                                    <div class="progress-fill" style="width: ${p.avanceFisico}%; background: ${color}"></div>
+                                </div>
                             </div>
-                            <div class="progress-bg">
-                                <div class="progress-fill" style="width: ${p.avanceFisico}%; background: ${color}"></div>
-                            </div>
-                        </div>
-                        <div class="track-item">
-                            <div class="track-header">
-                                <span>Ejecución Financiera</span>
-                                <span style="color: #fff; font-weight: 600">${p.avanceFinanciero}%</span>
-                            </div>
-                            <div class="progress-bg">
-                                <div class="progress-fill" style="width: ${p.avanceFinanciero}%; background: #10b981"></div>
-                            </div>
-                        </div>
-                        
-                        <div style="margin-top: 12px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px;">Control de Rendición de Cuentas</div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 13px; font-weight: 600; color: ${rendicionColor};">${p.estadoRendicion || 'No reportado'}</span>
-                                <i data-lucide="${rendicionIcon}" style="width: 14px; height: 14px; color: ${rendicionColor};"></i>
+                            <div style="flex: 1;">
+                                <div class="track-header" style="font-size: 9px; margin-bottom: 2px;">
+                                    <span>Financiera</span>
+                                    <span style="color: #fff; font-weight: 600">${p.avanceFinanciero}%</span>
+                                </div>
+                                <div class="progress-bg" style="height: 3px;">
+                                    <div class="progress-fill" style="width: ${p.avanceFinanciero}%; background: #10b981"></div>
+                                </div>
                             </div>
                         </div>
                         
-                        <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
-                            <span class="badge">COD: ${p.code}</span>
+                        <!-- Rendición y Presupuesto en Fila -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <span class="badge" style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 4px; padding: 4px 8px;">
+                                <i data-lucide="${rendicionIcon}" style="width: 10px; height: 10px; color: ${rendicionColor};"></i> 
+                                <span style="color: ${rendicionColor};">${p.estadoRendicion || 'No reportado'}</span>
+                            </span>
                             <span style="color: #10b981; font-size: 13px; font-weight: 700;">${p.inversion}</span>
                         </div>
 
-                        <div style="margin-top: 15px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.1);">
-                            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">Documentos Oficiales</div>
-                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                <a href="#" class="doc-btn" onclick="event.preventDefault();"><i data-lucide="file-text"></i> Resolución</a>
-                                <a href="#" class="doc-btn" onclick="event.preventDefault();"><i data-lucide="file-signature"></i> Convenio</a>
-                                ${p.estadoRendicion === 'Aprobada' ? `<a href="#" class="doc-btn" style="border-color: rgba(16,185,129,0.3); color: #10b981;" onclick="event.preventDefault();"><i data-lucide="check-square"></i> Acta de Cierre</a>` : ''}
-                            </div>
+                        <!-- Botones de Documentos -->
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                            <a href="#" class="doc-btn" style="padding: 4px 8px; font-size: 10px;" onclick="event.preventDefault();"><i data-lucide="file-text" style="width: 12px; height: 12px;"></i> Resolución</a>
+                            <a href="#" class="doc-btn" style="padding: 4px 8px; font-size: 10px;" onclick="event.preventDefault();"><i data-lucide="file-signature" style="width: 12px; height: 12px;"></i> Convenio</a>
+                            ${p.estadoRendicion === 'Aprobada' ? `<a href="#" class="doc-btn" style="border-color: rgba(16,185,129,0.3); color: #10b981; padding: 4px 8px; font-size: 10px;" onclick="event.preventDefault();"><i data-lucide="check-square" style="width: 12px; height: 12px;"></i> Cierre</a>` : ''}
                         </div>
                     </div>
                     </div>
