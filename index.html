@@ -135,20 +135,34 @@
         }
 
         .filter-chip {
-            padding: 6px 14px;
+            padding: 8px 16px;
             border-radius: 24px;
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 500;
             cursor: pointer;
-            border: 1px solid rgba(255,255,255,0.1);
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--text-muted);
-            transition: all 0.25s;
+            border: 1px solid rgba(255,255,255,0.25);
+            background: rgba(255, 255, 255, 0.1);
+            color: #f8fafc;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             user-select: none;
             white-space: nowrap; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
-        .filter-chip:hover { background: rgba(255, 255, 255, 0.1); color: #ffffff; }
-        .filter-chip.active { background: #ffffff; color: #0f172a; border-color: #ffffff; font-weight: 600; }
+        .filter-chip:hover { 
+            background: rgba(255, 255, 255, 0.2); 
+            color: #ffffff; 
+            transform: translateY(-1px);
+            border-color: rgba(255,255,255,0.4);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .filter-chip.active { 
+            background: #ffffff; 
+            color: #0f172a; 
+            border-color: #ffffff; 
+            font-weight: 700; 
+            box-shadow: 0 4px 15px rgba(255,255,255,0.3);
+            transform: translateY(-1px);
+        }
 
         /* Lista de Proyectos Minimalista */
         .project-details {
@@ -202,10 +216,13 @@
         @media (max-width: 768px) {
             .mobile-menu-btn {
                 display: flex; position: absolute; top: 16px; left: 16px; z-index: 999;
-                background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px);
-                border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px;
-                color: white; padding: 12px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 12px;
+                color: white; padding: 12px; cursor: pointer; 
+                box-shadow: 0 4px 15px rgba(59, 130, 246, 0.5);
+                transition: transform 0.2s;
             }
+            .mobile-menu-btn:active { transform: scale(0.95); }
             .mobile-close-btn {
                 display: flex; background: none; border: none; color: var(--text-muted); cursor: pointer;
                 padding: 4px; border-radius: 6px;
@@ -317,7 +334,12 @@
         <div class="header">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
                 <div>
-                    <h1><i data-lucide="shield-alert"></i> Visor de Seguridad 8%</h1>
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
+                        <div style="background: white; display: inline-flex; padding: 4px 8px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+                            <img src="./logo.jfif" alt="GORE Ñuble" style="height: 26px; display: block;">
+                        </div>
+                        <h1><i data-lucide="shield-alert"></i> Visor de Seguridad 8%</h1>
+                    </div>
                     <p>Monitoreo territorial y financiero de iniciativas de seguridad ciudadana e incendios.</p>
                 </div>
                 <button class="mobile-close-btn" onclick="toggleMobileMenu()">
@@ -385,7 +407,7 @@
             // ACCIÓN COMUNITARIA
             {
                 id: 6, code: "2301SP0010", title: "Talleres de Defensa Personal", org: "ONG Ñuble Crece", category: "Acción Comunitaria", comuna: "Chillán", provincia: "DIGUILLÍN", lat: -36.6111, lng: -72.1034, inversion: "$1.500.000", avanceFisico: 100, avanceFinanciero: 100,
-                estadoRendicion: "En Revisión"
+                img: "./community_defense.jpg", estadoRendicion: "En Revisión"
             },
             // ILUMINACIÓN
             {
@@ -483,6 +505,8 @@
                     </div>
                     
                     <div style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px; margin-top: 6px;">
+                        <!-- Título de Avance -->
+                        <div style="font-size: 8px; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">Estado de Avance</div>
                         <!-- Progreso en Fila -->
                         <div style="display: flex; gap: 12px; margin-bottom: 8px;">
                             <div style="flex: 1;">
@@ -505,6 +529,11 @@
                             </div>
                         </div>
                         
+                        <!-- Títulos de Rendición e Inversión -->
+                        <div style="font-size: 8px; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; display: flex; justify-content: space-between;">
+                            <span>Rendición FNDR</span>
+                            <span>Monto Aprobado</span>
+                        </div>
                         <!-- Rendición y Presupuesto en Fila -->
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                             <span class="badge" style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 4px; padding: 4px 8px;">
